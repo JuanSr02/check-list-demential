@@ -34,7 +34,8 @@ const ICON = {
   right: '<path d="M6 3l5 5-5 5"/>',
   up: '<path d="M3.5 10L8 5.5 12.5 10"/>',
   down: '<path d="M3.5 6L8 10.5 12.5 6"/>',
-  trash: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8h5.8l.6-8"/>'
+  trash: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8h5.8l.6-8"/>',
+  chev: '<path d="M4 6l4 4 4-4"/>'
 };
 const ic = (name, size = 18) =>
   '<svg width="' + size + '" height="' + size + '" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[name] + '</svg>';
@@ -64,6 +65,9 @@ const S = {
   tpl: null, days: {}, today: todayKey(), sel: todayKey(),
   view: 'day', draftTpl: null, draft: '', enew: '', sdraft: {}, focus: null, err: ''
 };
+const LS_FOLD = 'plantilla.folded.v1';
+let folded = new Set((() => { try { return JSON.parse(localStorage.getItem(LS_FOLD)) || []; } catch (e) { return []; } })());
+const saveFold = () => { try { localStorage.setItem(LS_FOLD, JSON.stringify([...folded])); } catch (e) {} };
 let anim = null;           // animación a aplicar en el próximo render
 const segPrev = {};         // ancho anterior de cada segmento de la barra de avance
 const tplItems = () => S.tpl || DEFAULTS;
@@ -209,7 +213,9 @@ function headHTML(key) {
     return '<span class="seg"><i style="width:' + from + '%" data-w="' + w + '"></i></span>';
   }).join('');
   const count = !S.ready ? '' : total === 0 ? 'Sin ítems' : (done === total ? 'Completo' : done + ' de ' + total);
-  return '<header class="top"><div class="datebar"><div class="dt"><h1 class="dow" style="margin:0">' + esc(dow) + '</h1><div class="dm">' + esc(dm) + '</div>' +
+  const diffDays = Math.round((parseKey(tk) - d) / 864e5);
+  const rel = diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Ayer' : 'Hace ' + diffDays + ' días';
+  return '<header class="top"><div class="datebar"><div class="dt"><div class="eyebrow' + (diffDays ? ' past' : '') + '">' + rel + '</div><h1 class="dow" style="margin:0">' + esc(dow) + '</h1><div class="dm">' + esc(dm) + '</div>' +
     (key !== tk ? '<button class="pill" data-act="today">Volver a hoy</button>' : '') +
     '</div><div class="navs">' +
     '<button class="nav" data-act="prev" aria-label="Día anterior"' + (key <= minKey() ? ' disabled' : '') + '>' + ic('left') + '</button>' +
@@ -224,27 +230,39 @@ function itemHTML(it, isDone) {
   const hasSubs = a.length > 0;
   const state = isDone ? 'true' : (ds.length ? 'mixed' : 'false');
   const part = !isDone && hasSubs && ds.length ? '<span class="part" style="height:' + Math.round(ds.length / a.length * 100) + '%"></span>' : '';
-  let h = '<li><div class="row"><button class="chk" id="c-' + esc(it.id) + '" role="checkbox" aria-checked="' + state + '" data-act="toggle" data-id="' + esc(it.id) + '">' +
-    '<span class="box">' + part + ic('check', 16) + '</span><span class="txt">' + esc(it.text) + '</span>' +
-    (hasSubs ? '<span class="frac">' + ds.length + '/' + a.length + '</span>' : '') + '</button>' +
-    (isDone ? '' : '<button class="ico" data-act="drop" data-id="' + esc(it.id) + '" aria-label="' + (it.tpl ? 'Omitir hoy: ' : 'Quitar: ') + esc(it.text) + '" title="' + (it.tpl ? 'Omitir por hoy' : 'Quitar') + '">' + ic('x', 16) + '</button>') +
-    '</div>';
-  if (!isDone && (it.subs || []).length) {
-    const order = a.filter((s) => s.status !== 'done').concat(ds);
-    const skipped = it.subs.filter((s) => s.status === 'skipped');
-    h += '<ul class="subs">' + order.map((s) => {
-      const on = s.status === 'done';
-      return '<li class="row"><button class="chk" id="c-' + esc(it.id) + '-' + esc(s.id) + '" role="checkbox" aria-checked="' + on + '" data-act="stoggle" data-id="' + esc(it.id) + '" data-sid="' + esc(s.id) + '">' +
-        '<span class="box">' + ic('check', 13) + '</span><span class="txt">' + esc(s.text) + '</span></button>' +
-        (on ? '' : '<button class="ico" data-act="sdrop" data-id="' + esc(it.id) + '" data-sid="' + esc(s.id) + '" aria-label="Omitir hoy: ' + esc(s.text) + '" title="Omitir por hoy">' + ic('x', 14) + '</button>') +
-        '</li>';
-    }).join('') + '</ul>';
-    if (skipped.length) {
-      h += '<div class="subnote" style="padding-bottom:8px"><span>Omitido hoy: ' + esc(skipped.map((s) => s.text).join(', ')) + '</span>' +
-        '<button class="link" data-act="srestore" data-id="' + esc(it.id) + '">Restaurar</button></div>';
-    }
+  const box = '<span class="box">' + part + ic('check', 16) + '</span>';
+  const frac = hasSubs ? '<span class="frac">' + ds.length + '/' + a.length + '</span>' : '';
+  const dropBtn = isDone ? '' : '<button class="ico" data-act="drop" data-id="' + esc(it.id) + '" aria-label="' + (it.tpl ? 'Omitir hoy: ' : 'Quitar: ') + esc(it.text) + '" title="' + (it.tpl ? 'Omitir por hoy' : 'Quitar') + '">' + ic('x', 16) + '</button>';
+
+  // Sin subítems, o ya hecho: toda la fila marca / desmarca.
+  if (isDone || !(it.subs || []).length) {
+    return '<li><div class="row"><button class="chk" id="c-' + esc(it.id) + '" role="checkbox" aria-checked="' + state + '" data-act="toggle" data-id="' + esc(it.id) + '">' +
+      box + '<span class="txt">' + esc(it.text) + '</span>' + frac + '</button>' + dropBtn + '</div></li>';
   }
-  return h + '</li>';
+
+  // Con subítems: el círculo marca todo y el nombre pliega o despliega la lista.
+  const isFolded = folded.has(it.id);
+  const pendSubs = a.filter((s) => s.status !== 'done');
+  const nextTxt = isFolded && pendSubs.length ? '<span class="next">Sigue: ' + esc(pendSubs[0].text) + '</span>' : '';
+  let h = '<li class="grp' + (isFolded ? ' folded' : '') + '"><div class="row">' +
+    '<button class="chk chkall" id="c-' + esc(it.id) + '" role="checkbox" aria-checked="' + state + '" data-act="toggle" data-id="' + esc(it.id) + '" aria-label="Marcar todo: ' + esc(it.text) + '" title="Marcar todo">' + box + '</button>' +
+    '<button class="expander" data-act="fold" data-id="' + esc(it.id) + '" aria-expanded="' + !isFolded + '" aria-controls="subs-' + esc(it.id) + '">' +
+      '<span class="txtwrap"><span class="txt">' + esc(it.text) + '</span>' + nextTxt + '</span>' + frac + '<span class="chev">' + ic('chev', 16) + '</span></button>' +
+    dropBtn + '</div>';
+  const order = pendSubs.concat(ds);
+  const skipped = it.subs.filter((s) => s.status === 'skipped');
+  h += '<div class="subwrap" id="subs-' + esc(it.id) + '"' + (isFolded ? ' hidden' : '') + '><ul class="subs">' + order.map((s) => {
+    const on = s.status === 'done';
+    return '<li class="row"><button class="chk" id="c-' + esc(it.id) + '-' + esc(s.id) + '" role="checkbox" aria-checked="' + on + '" data-act="stoggle" data-id="' + esc(it.id) + '" data-sid="' + esc(s.id) + '">' +
+      '<span class="box">' + ic('check', 13) + '</span><span class="txt">' + esc(s.text) + '</span></button>' +
+      (on ? '' : '<button class="ico" data-act="sdrop" data-id="' + esc(it.id) + '" data-sid="' + esc(s.id) + '" aria-label="Omitir hoy: ' + esc(s.text) + '" title="Omitir por hoy">' + ic('x', 14) + '</button>') +
+      '</li>';
+  }).join('') + '</ul>';
+  if (skipped.length) {
+    h += '<div class="subnote" style="padding-bottom:8px"><span>Omitido hoy: ' + esc(skipped.map((s) => s.text).join(', ')) + '</span>' +
+      '<button class="link" data-act="srestore" data-id="' + esc(it.id) + '">Restaurar</button></div>';
+  }
+  return h + '</div></li>';
 }
 
 function stripHTML() {
@@ -374,6 +392,7 @@ function render() {
   root.innerHTML = S.auth !== 'in' ? signinHTML() : (S.view === 'edit' ? editHTML() : S.view === 'settings' ? settingsHTML() : dayHTML());
   root.classList.toggle('motion', motionOK());
   applyAnim();
+  fillMini();
   const target = S.focus || fid;
   S.focus = null;
   if (target) {
@@ -418,11 +437,67 @@ function check(el, fn, on) {
   else { sfx(on ? 'tick' : 'untick'); if (on) buzz(8); }
 }
 
+/* ================= deshacer ================= */
+const toastEl = document.createElement('div');
+toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite');
+document.body.appendChild(toastEl);
+let toastTimer = null, undoFn = null;
+function toast(msg, undo) {
+  undoFn = undo || null;
+  toastEl.innerHTML = '<span class="toast-msg"></span>' + (undo ? '<button class="toast-btn" type="button">Deshacer</button>' : '');
+  toastEl.querySelector('.toast-msg').textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() { toastEl.classList.remove('show'); undoFn = null; }
+toastEl.addEventListener('click', (e) => {
+  if (e.target.closest('.toast-btn') && undoFn) { const f = undoFn; hideToast(); f(); }
+});
+// Guarda cómo estaba el día para poder volver atrás.
+function undoableDay(msg) {
+  const key = S.sel, snap = clone(dayItems(key)), hadDoc = !!S.days[key];
+  return () => toast(msg, () => {
+    S.days[key] = snap; if (hadDoc || true) persistDay(key); render();
+  });
+}
+function undoableTpl(msg) {
+  const snap = clone(S.draftTpl);
+  return () => toast(msg, () => { S.draftTpl = snap; S.sdraft = {}; persistTpl(); render(); });
+}
+
+/* ================= barra compacta al scrollear ================= */
+const miniEl = document.createElement('div');
+miniEl.className = 'mini'; miniEl.setAttribute('aria-hidden', 'true');
+document.body.appendChild(miniEl);
+function updateMini() {
+  const top = root.querySelector('.top');
+  const show = S.auth === 'in' && S.view === 'day' && S.ready && top && top.getBoundingClientRect().bottom < 8;
+  miniEl.classList.toggle('show', !!show);
+}
+function fillMini() {
+  if (!(S.auth === 'in' && S.view === 'day' && S.ready)) { miniEl.classList.remove('show'); return; }
+  const items = dayItems(S.sel).filter((i) => i.status !== 'skipped');
+  const fr = items.map((it) => { const a = activeSubs(it).length; return it.status === 'done' ? 1 : (a ? doneSubs(it).length / a : 0); });
+  const pct = fr.length ? Math.round(fr.reduce((x, y) => x + y, 0) / fr.length * 100) : 0;
+  const done = items.filter((i) => i.status === 'done').length;
+  const d = parseKey(S.sel).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric' });
+  miniEl.innerHTML = '<div class="mini-in"><span class="mini-day"></span><span class="mini-bar"><i style="width:' + pct + '%"></i></span><span class="mini-count">' + done + '/' + items.length + '</span></div>';
+  miniEl.querySelector('.mini-day').textContent = d;
+  updateMini();
+}
+window.addEventListener('scroll', updateMini, { passive: true });
+
 /* ================= acciones ================= */
 const swap = (arr, a, b) => { const x = arr[a]; arr[a] = arr[b]; arr[b] = x; };
 const A = {
   toggle(el) {
     const willOn = el.getAttribute('aria-checked') !== 'true';
+    const it0 = find(dayItems(S.sel), el.dataset.id);
+    if (!willOn && it0 && activeSubs(it0).length > 1) {
+      const done = undoableDay('Desmarcaste ' + it0.text);
+      setTimeout(done, 0);
+    }
     check(el, (items) => {
       const it = find(items, el.dataset.id); if (!it) return;
       const a = activeSubs(it);
@@ -450,18 +525,30 @@ const A = {
   pref(el) { setPref(el.dataset.k, !prefs[el.dataset.k]); S.focus = el.id; render(); if (el.dataset.k === 'sound' && prefs.sound) sfx('tick'); },
   preview() { sfx('day'); confetti(); },
   drop(el) {
+    const it0 = find(dayItems(S.sel), el.dataset.id);
+    const done = undoableDay((it0 && it0.tpl ? 'Omitido hoy: ' : 'Quitado: ') + (it0 ? it0.text : ''));
     mutate(S.sel, (items) => {
       const i = items.findIndex((x) => x.id === el.dataset.id);
       if (i < 0) return;
       if (items[i].tpl) items[i].status = 'skipped'; else items.splice(i, 1);
     });
+    done();
   },
   sdrop(el) {
+    const p0 = find(dayItems(S.sel), el.dataset.id), s0 = p0 && find(p0.subs, el.dataset.sid);
+    const done = undoableDay('Omitido hoy: ' + (s0 ? s0.text : ''));
     mutate(S.sel, (items) => {
       const it = find(items, el.dataset.id); if (!it) return;
       const s = find(it.subs, el.dataset.sid);
       if (s) s.status = 'skipped';
     });
+    done();
+  },
+  fold(el) {
+    const id = el.dataset.id;
+    if (folded.has(id)) folded.delete(id); else folded.add(id);
+    saveFold(); S.focus = null; render();
+    const b = root.querySelector('.expander[data-id="' + id.replace(/"/g, '') + '"]'); if (b) b.focus();
   },
   srestore(el) {
     mutate(S.sel, (items) => {
@@ -485,17 +572,17 @@ const A = {
       });
     });
   },
-  prev() { if (S.sel > minKey()) { S.sel = addDays(S.sel, -1); render(); } },
-  next() { if (S.sel < todayKey()) { S.sel = addDays(S.sel, 1); render(); } },
+  prev() { goDay(-1); },
+  next() { goDay(1); },
   today() { S.sel = todayKey(); render(); },
   pick(el) { S.sel = el.dataset.key; render(); window.scrollTo(0, 0); },
   edit() { S.draftTpl = clone(tplItems()); S.enew = ''; S.sdraft = {}; S.view = 'edit'; render(); window.scrollTo(0, 0); },
   doneEdit() { S.view = 'day'; S.draftTpl = null; render(); window.scrollTo(0, 0); },
   up(el) { const i = +el.dataset.i; if (i < 1) return; swap(S.draftTpl, i - 1, i); S.sdraft = {}; persistTpl(); render(); },
   down(el) { const i = +el.dataset.i; if (i >= S.draftTpl.length - 1) return; swap(S.draftTpl, i + 1, i); S.sdraft = {}; persistTpl(); render(); },
-  del(el) { S.draftTpl.splice(+el.dataset.i, 1); S.sdraft = {}; persistTpl(); render(); },
+  del(el) { const t = S.draftTpl[+el.dataset.i]; const done = undoableTpl('Eliminado: ' + t.text + (t.subs.length ? ' y sus ' + t.subs.length + ' subítems' : '')); S.draftTpl.splice(+el.dataset.i, 1); S.sdraft = {}; persistTpl(); render(); done(); },
   sup(el) { const i = +el.dataset.i, j = +el.dataset.j; if (j < 1) return; swap(S.draftTpl[i].subs, j - 1, j); persistTpl(); render(); },
-  sdel(el) { S.draftTpl[+el.dataset.i].subs.splice(+el.dataset.j, 1); persistTpl(); render(); },
+  sdel(el) { const sb = S.draftTpl[+el.dataset.i].subs[+el.dataset.j]; const done = undoableTpl('Eliminado: ' + sb.text); S.draftTpl[+el.dataset.i].subs.splice(+el.dataset.j, 1); persistTpl(); render(); done(); },
   signout() { signOutLocal(''); }
 };
 
@@ -549,6 +636,32 @@ root.addEventListener('change', (e) => {
     S.draftTpl[+t.dataset.i].subs[+t.dataset.j].text = t.value.trim(); persistTpl();
   }
 });
+
+/* ================= gestos y teclado ================= */
+let touch = null;
+root.addEventListener('touchstart', (e) => {
+  if (S.view !== 'day' || e.touches.length !== 1 || e.target.closest('input, textarea, .strip')) { touch = null; return; }
+  touch = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+}, { passive: true });
+root.addEventListener('touchend', (e) => {
+  if (!touch) return;
+  const t = e.changedTouches[0], dx = t.clientX - touch.x, dy = t.clientY - touch.y, dt = Date.now() - touch.t;
+  touch = null;
+  if (Math.abs(dx) > 70 && Math.abs(dy) < 45 && dt < 600) goDay(dx < 0 ? 1 : -1);
+}, { passive: true });
+document.addEventListener('keydown', (e) => {
+  if (S.view !== 'day' || S.auth !== 'in' || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.target.closest && e.target.closest('input, textarea')) return;
+  if (e.key === 'ArrowLeft') goDay(-1);
+  else if (e.key === 'ArrowRight') goDay(1);
+  else if (e.key === 'Escape') hideToast();
+});
+function goDay(dir) {
+  const next = addDays(S.sel, dir);
+  if (next > todayKey() || next < minKey()) return;
+  S.sel = next; render();
+  if (motionOK()) { root.classList.remove('slide-l', 'slide-r'); void root.offsetWidth; root.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
+}
 
 /* ================= cambio de día ================= */
 function rollover() {

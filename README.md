@@ -9,6 +9,9 @@ Proyecto construido junto con [Claude](https://claude.ai) (Anthropic).
 
 - **Plantilla del día.** Cada día empieza con la misma lista. La plantilla se edita desde la app: agregar, renombrar, ordenar y borrar ítems.
 - **Subítems.** Un ítem puede tener pasos (por ejemplo *Limpieza Completa* → Lavar, Barrer piso, Baño…). Cuando se completan todos, el ítem pasa a *Hechas*.
+- **Grupos plegables.** El círculo marca todo el grupo; tocar el nombre lo pliega y muestra el próximo paso pendiente.
+- **Deshacer.** Omitir, quitar, desmarcar un grupo o borrar de la plantilla se puede revertir desde el aviso inferior.
+- **Navegación rápida.** Deslizar a los lados (o ←/→ en la PC) cambia de día; al scrollear queda una barra compacta con el avance.
 - **Ajustes por día.** Se puede omitir un ítem o un subítem solo por hoy, o agregar algo puntual sin tocar la plantilla.
 - **Historial.** Avance de los últimos 7 días, y navegación hasta 30 días atrás.
 - **Sincronizada y offline.** Lo que marcás en el celular aparece en la PC. Sin conexión sigue funcionando y sube los cambios cuando vuelve.
