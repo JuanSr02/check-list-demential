@@ -1,3 +1,5 @@
+import { PALETTES, prefs, setPref, isDark, motionOK, sfx, confetti, buzz } from './fx.js';
+
 /* ================= plantilla por defecto ================= */
 const mk = (p, arr) => arr.map((t, i) => ({ id: p + '-' + (i + 1), text: t }));
 const DEFAULTS = [
@@ -62,6 +64,8 @@ const S = {
   tpl: null, days: {}, today: todayKey(), sel: todayKey(),
   view: 'day', draftTpl: null, draft: '', enew: '', sdraft: {}, focus: null, err: ''
 };
+let anim = null;           // animación a aplicar en el próximo render
+const segPrev = {};         // ancho anterior de cada segmento de la barra de avance
 const tplItems = () => S.tpl || DEFAULTS;
 const dayItems = (key) => S.days[key] || tplItems().map(fromTpl);
 
@@ -110,8 +114,9 @@ async function flush() {
         await api('POST', payload);
         if (queue[k] === payload) delete queue[k];
         lsSet(LS_QUEUE, queue);
+        const hadErr = !!S.err || !S.online;
         S.online = true; S.err = '';
-        if (!Object.keys(queue).length) render();
+        if (hadErr) render(); else if (!Object.keys(queue).length) updateAcct();
       } catch (e) {
         if (e.status === 401) { signOutLocal('La clave cambió. Ingresala de nuevo.'); return; }
         if (e.status && e.status !== 429 && e.status < 500) { delete queue[k]; lsSet(LS_QUEUE, queue); S.err = e.message; render(); continue; }
@@ -198,7 +203,10 @@ function headHTML(key) {
   const segs = items.map((it) => {
     const a = activeSubs(it).length;
     const f = it.status === 'done' ? 1 : (a ? doneSubs(it).length / a : 0);
-    return '<span class="seg"><i style="width:' + Math.round(f * 100) + '%"></i></span>';
+    const w = Math.round(f * 100), k = key + ':' + it.id;
+    const from = segPrev[k] == null ? w : segPrev[k];
+    segPrev[k] = w;
+    return '<span class="seg"><i style="width:' + from + '%" data-w="' + w + '"></i></span>';
   }).join('');
   const count = !S.ready ? '' : total === 0 ? 'Sin ítems' : (done === total ? 'Completo' : done + ' de ' + total);
   return '<header class="top"><div class="datebar"><div class="dt"><h1 class="dow" style="margin:0">' + esc(dow) + '</h1><div class="dm">' + esc(dm) + '</div>' +
@@ -256,6 +264,11 @@ function stripHTML() {
   return out;
 }
 
+function updateAcct() {
+  const el = root.querySelector('.acct');
+  if (el) el.outerHTML = acctHTML(); else render();
+}
+
 function acctHTML() {
   const pend = Object.keys(queue).length;
   const status = !S.online
@@ -282,7 +295,9 @@ function dayHTML() {
   if (!pend.length && !done.length && !skip.length) {
     html += '<p class="empty">Este día no tiene ítems. Agregá uno abajo o armá la plantilla.</p>';
   } else if (!pend.length && done.length) {
-    html += '<p class="allset">Todo hecho' + (key === tk ? ' por hoy' : '') + '.</p>';
+    html += key === tk
+      ? '<div class="celebrate' + (anim && anim.day ? ' go' : '') + '"><div class="cel-badge">' + ic('check', 30) + '</div><div><div class="cel-title">Día completo</div><div class="cel-sub">Hiciste todo lo de hoy.</div></div></div>'
+      : '<p class="allset">Todo hecho.</p>';
   }
   if (pend.length) html += '<ul class="list">' + pend.map((i) => itemHTML(i, false)).join('') + '</ul>';
   if (done.length) {
@@ -296,7 +311,7 @@ function dayHTML() {
   html += '<form id="form-add" class="addrow" autocomplete="off"><input class="field" id="add" type="text" enterkeyhint="done" maxlength="120" placeholder="Agregar solo ' + (key === tk ? 'para hoy' : 'a este día') + '" aria-label="Nuevo ítem" value="' + esc(S.draft) + '"><button class="btn" type="submit">Agregar</button></form>';
   html += '<section><div class="h"><span>Últimos 7 días</span></div><div class="strip">' + stripHTML() + '</div></section>';
   html += '<div class="foot">' + (S.err ? '<p class="err" role="alert">' + esc(S.err) + '</p>' : '') +
-    '<button class="btn" data-act="edit">Editar plantilla</button>' + acctHTML() + '</div>';
+    '<div class="footbtns"><button class="btn" data-act="edit">Editar plantilla</button><button class="btn" data-act="settings">Ajustes</button></div>' + acctHTML() + '</div>';
   return html;
 }
 
@@ -324,6 +339,25 @@ function editHTML() {
     (S.err ? '<p class="err" role="alert">' + esc(S.err) + '</p>' : '') + '</div>';
 }
 
+function settingsHTML() {
+  const sw = Object.keys(PALETTES).map((k) => {
+    const p = PALETTES[k], t = isDark() ? p.dark : p.light;
+    return '<button class="swatch" data-act="palette" data-k="' + k + '" aria-pressed="' + (prefs.palette === k) + '" style="--sw-bg:' + t.bg + ';--sw-ac:' + t.accent + ';--sw-soft:' + t.accentSoft + ';--sw-ink:' + t.accentInk + '">' +
+      '<span class="sw-chip"><span class="sw-dot">' + ic('check', 14) + '</span><span class="sw-bar"></span><span class="sw-bar short"></span></span><span class="sw-name">' + p.name + '</span></button>';
+  }).join('');
+  const seg = (k, label) => '<button class="segbtn" data-act="mode" data-k="' + k + '" aria-pressed="' + (prefs.mode === k) + '">' + label + '</button>';
+  const toggle = (k, label, hint) => '<div class="setrow"><div><div class="set-l">' + label + '</div><div class="set-h">' + hint + '</div></div>' +
+    '<button class="switch" role="switch" id="sw-' + k + '" data-act="pref" data-k="' + k + '" aria-checked="' + !!prefs[k] + '" aria-label="' + label + '"><span></span></button></div>';
+  return '<header class="top"><div class="datebar"><div class="dt"><h1 class="dow" style="margin:0">Ajustes</h1><div class="dm">Se guardan en este dispositivo</div></div>' +
+    '<button class="btn primary" data-act="doneSettings">Listo</button></div></header>' +
+    '<section><div class="h"><span>Color</span></div><div class="swatches">' + sw + '</div></section>' +
+    '<section><div class="h"><span>Modo</span></div><div class="segctl" role="group" aria-label="Modo">' + seg('auto', 'Automático') + seg('light', 'Claro') + seg('dark', 'Oscuro') + '</div></section>' +
+    '<section><div class="h"><span>Efectos</span></div><div class="list setlist">' +
+      toggle('sound', 'Sonido', 'Al marcar, al completar un ítem y al terminar el día.') +
+      toggle('motion', 'Animaciones', 'Confeti y movimientos al marcar.') +
+    '</div><div class="addrow" style="margin-top:10px"><button class="btn" data-act="preview">Probar efectos</button></div></section>';
+}
+
 function signinHTML() {
   if (S.auth === 'checking') return '<div class="signin" aria-busy="true"><h1 class="dow" style="margin:0">Plantilla</h1><p>Cargando…</p></div>';
   return '<form class="signin" id="form-login" autocomplete="on"><h1 class="dow" style="margin:0">Plantilla</h1>' +
@@ -337,7 +371,9 @@ function render() {
   const ae = document.activeElement;
   const fid = ae && ae.id && root.contains(ae) ? ae.id : null;
   const pos = fid && ae.selectionStart != null ? ae.selectionStart : null;
-  root.innerHTML = S.auth !== 'in' ? signinHTML() : (S.view === 'edit' ? editHTML() : dayHTML());
+  root.innerHTML = S.auth !== 'in' ? signinHTML() : (S.view === 'edit' ? editHTML() : S.view === 'settings' ? settingsHTML() : dayHTML());
+  root.classList.toggle('motion', motionOK());
+  applyAnim();
   const target = S.focus || fid;
   S.focus = null;
   if (target) {
@@ -349,11 +385,45 @@ function render() {
   }
 }
 
+function applyAnim() {
+  const bars = root.querySelectorAll('.seg i[data-w]');
+  if (bars.length) {
+    requestAnimationFrame(() => requestAnimationFrame(() => bars.forEach((b) => { b.style.width = b.dataset.w + '%'; })));
+  }
+  if (!anim) return;
+  const a = anim; anim = null;
+  if (!motionOK()) return;
+  if (a.pop) { const el = document.getElementById(a.pop); if (el) el.classList.add('pop'); }
+  if (a.arrive) { const el = document.getElementById(a.arrive); if (el) el.closest('li').classList.add('arrive'); }
+}
+
+const dayState = (items) => {
+  const act = items.filter((i) => i.status !== 'skipped');
+  return { done: new Set(act.filter((i) => i.status === 'done').map((i) => i.id)), all: act.length > 0 && act.every((i) => i.status === 'done') };
+};
+// Marca y decide animación y sonido según cómo cambia el día.
+function check(el, fn, on) {
+  const key = S.sel;
+  const before = dayState(dayItems(key));
+  const next = clone(dayItems(key)); fn(next); next.forEach(sync);
+  const after = dayState(next);
+  const newly = [...after.done].filter((id) => !before.done.has(id));
+  const dayDone = after.all && !before.all;
+  anim = { pop: el.id };
+  if (newly.length) anim.arrive = 'c-' + newly[0];
+  if (dayDone) anim.day = true;
+  mutate(key, fn);
+  if (dayDone) { sfx('day'); buzz([20, 60, 30]); confetti(); }
+  else if (newly.length) { sfx('done'); buzz(18); }
+  else { sfx(on ? 'tick' : 'untick'); if (on) buzz(8); }
+}
+
 /* ================= acciones ================= */
 const swap = (arr, a, b) => { const x = arr[a]; arr[a] = arr[b]; arr[b] = x; };
 const A = {
   toggle(el) {
-    mutate(S.sel, (items) => {
+    const willOn = el.getAttribute('aria-checked') !== 'true';
+    check(el, (items) => {
       const it = find(items, el.dataset.id); if (!it) return;
       const a = activeSubs(it);
       if (a.length) {
@@ -362,16 +432,23 @@ const A = {
       } else {
         it.status = it.status === 'done' ? 'pending' : 'done';
       }
-    });
+    }, willOn);
   },
   stoggle(el) {
     S.focus = el.id;
-    mutate(S.sel, (items) => {
+    const willOn = el.getAttribute('aria-checked') !== 'true';
+    check(el, (items) => {
       const it = find(items, el.dataset.id); if (!it) return;
       const s = find(it.subs, el.dataset.sid);
       if (s) s.status = s.status === 'done' ? 'pending' : 'done';
-    });
+    }, willOn);
   },
+  settings() { S.view = 'settings'; render(); window.scrollTo(0, 0); },
+  doneSettings() { S.view = 'day'; render(); window.scrollTo(0, 0); },
+  palette(el) { setPref('palette', el.dataset.k); sfx('tick'); render(); },
+  mode(el) { setPref('mode', el.dataset.k); render(); },
+  pref(el) { setPref(el.dataset.k, !prefs[el.dataset.k]); S.focus = el.id; render(); if (el.dataset.k === 'sound' && prefs.sound) sfx('tick'); },
+  preview() { sfx('day'); confetti(); },
   drop(el) {
     mutate(S.sel, (items) => {
       const i = items.findIndex((x) => x.id === el.dataset.id);

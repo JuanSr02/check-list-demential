@@ -1,10 +1,10 @@
 // Service worker: guarda la app para que abra rápido y sin conexión.
 // Los datos (/api) no pasan por acá: la app los guarda en el dispositivo y los sincroniza sola.
 // Subí el número de VERSION cada vez que cambies algún archivo de la app.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'plantilla-' + VERSION;
 const SHELL = [
-  './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
+  './', './index.html', './styles.css', './app.js', './fx.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'
 ];
 

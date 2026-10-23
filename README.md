@@ -12,7 +12,8 @@ Proyecto construido junto con [Claude](https://claude.ai) (Anthropic).
 - **Ajustes por día.** Se puede omitir un ítem o un subítem solo por hoy, o agregar algo puntual sin tocar la plantilla.
 - **Historial.** Avance de los últimos 7 días, y navegación hasta 30 días atrás.
 - **Sincronizada y offline.** Lo que marcás en el celular aparece en la PC. Sin conexión sigue funcionando y sube los cambios cuando vuelve.
-- **Tema claro y oscuro**, según el sistema.
+- **Temas de color.** Seis paletas (Azul, Bosque, Atardecer, Uva, Océano, Grafito), cada una con modo claro, oscuro o automático.
+- **Animaciones y sonido.** Efecto al marcar, entrada a *Hechas* al completar un ítem, y confeti con sonido al terminar el día. Se desactivan desde *Ajustes*.
 
 ## Stack
 
@@ -48,6 +49,7 @@ Sin Redis configurado, los datos se guardan en memoria.
 ├── index.html             # página
 ├── styles.css             # estilos y temas
 ├── app.js                 # lógica, vistas y sincronización
+├── fx.js                  # temas, sonidos (Web Audio) y confeti
 ├── api/
 │   ├── state.js           # GET/POST de plantilla y días (protegido con clave)
 │   └── _store.js          # cliente Redis (memoria en local)

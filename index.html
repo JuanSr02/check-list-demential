@@ -18,6 +18,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
   <link rel="stylesheet" href="styles.css">
+  <script>
+    // Aplica el último tema antes de mostrar la página (evita un parpadeo de color).
+    try {
+      var t = JSON.parse(localStorage.getItem('plantilla.themevars'));
+      if (t) { var r = document.documentElement.style;
+        r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface); r.setProperty('--ink', t.ink);
+        r.setProperty('--muted', t.muted); r.setProperty('--line', t.line); r.setProperty('--accent', t.accent);
+        r.setProperty('--accent-ink', t.accentInk); r.setProperty('--accent-soft', t.accentSoft); }
+    } catch (e) {}
+  </script>
 </head>
 <body>
   <main id="app" class="wrap"></main>
