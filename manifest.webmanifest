@@ -1,0 +1,16 @@
+{
+  "name": "Plantilla",
+  "short_name": "Plantilla",
+  "description": "Checklist diaria con plantilla editable y subítems.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F5F5",
+  "theme_color": "#1F5FC4",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

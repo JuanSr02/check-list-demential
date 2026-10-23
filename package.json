@@ -1,0 +1,14 @@
+{
+  "name": "plantilla",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.mjs"
+  },
+  "dependencies": {
+    "@upstash/redis": "1.34.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
