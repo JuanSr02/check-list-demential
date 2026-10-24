@@ -15,7 +15,8 @@ Proyecto construido junto con [Claude](https://claude.ai) (Anthropic).
 - **Ajustes por día.** Se puede omitir un ítem o un subítem solo por hoy, o agregar algo puntual sin tocar la plantilla.
 - **Historial.** Avance de los últimos 7 días, y navegación hasta 30 días atrás.
 - **Sincronizada y offline.** Lo que marcás en el celular aparece en la PC. Sin conexión sigue funcionando y sube los cambios cuando vuelve.
-- **Temas de color.** Seis paletas (Azul, Bosque, Atardecer, Uva, Océano, Grafito), cada una con modo claro, oscuro o automático.
+- **Tema River** (por defecto). Rojo y blanco con la banda en diagonal, lluvia de papelitos y pitazo final al completar el día, y mensajes especiales el 25 de mayo y el 9 de diciembre.
+- **Temas de color.** Además: Azul, Bosque, Atardecer, Uva, Océano y Grafito, cada uno con modo claro, oscuro o automático.
 - **Animaciones y sonido.** Efecto al marcar, entrada a *Hechas* al completar un ítem, y confeti con sonido al terminar el día. Se desactivan desde *Ajustes*.
 
 ## Stack

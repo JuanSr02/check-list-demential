@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Plantilla</title>
   <meta name="description" content="Checklist diaria con plantilla editable y subítems.">
-  <meta name="theme-color" content="#F2F5F5" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#0E1415" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F6F4F4" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0E0A0B" media="(prefers-color-scheme: dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Plantilla">
@@ -26,6 +26,8 @@
         r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface); r.setProperty('--ink', t.ink);
         r.setProperty('--muted', t.muted); r.setProperty('--line', t.line); r.setProperty('--accent', t.accent);
         r.setProperty('--accent-ink', t.accentInk); r.setProperty('--accent-soft', t.accentSoft); }
+      var pr = JSON.parse(localStorage.getItem('plantilla.prefs.v1') || '{}');
+      if (!pr.palette || pr.palette === 'river') document.documentElement.classList.add('river');
     } catch (e) {}
   </script>
 </head>

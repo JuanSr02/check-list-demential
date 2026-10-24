@@ -1,4 +1,4 @@
-import { PALETTES, prefs, setPref, isDark, motionOK, sfx, confetti, buzz } from './fx.js';
+import { PALETTES, prefs, setPref, isDark, isRiver, motionOK, sfx, confetti, buzz } from './fx.js';
 
 /* ================= plantilla por defecto ================= */
 const mk = (p, arr) => arr.map((t, i) => ({ id: p + '-' + (i + 1), text: t }));
@@ -214,7 +214,12 @@ function headHTML(key) {
   }).join('');
   const count = !S.ready ? '' : total === 0 ? 'Sin ítems' : (done === total ? 'Completo' : done + ' de ' + total);
   const diffDays = Math.round((parseKey(tk) - d) / 864e5);
-  const rel = diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Ayer' : 'Hace ' + diffDays + ' días';
+  let rel = diffDays === 0 ? 'Hoy' : diffDays === 1 ? 'Ayer' : 'Hace ' + diffDays + ' días';
+  if (isRiver()) {
+    const md = (d.getMonth() + 1) + '-' + d.getDate();
+    if (md === '5-25') rel += ' · Cumple River (' + (d.getFullYear() - 1901) + ' años)';
+    else if (md === '12-9') rel += ' · Madrid 2018';
+  }
   return '<header class="top"><div class="datebar"><div class="dt"><div class="eyebrow' + (diffDays ? ' past' : '') + '">' + rel + '</div><h1 class="dow" style="margin:0">' + esc(dow) + '</h1><div class="dm">' + esc(dm) + '</div>' +
     (key !== tk ? '<button class="pill" data-act="today">Volver a hoy</button>' : '') +
     '</div><div class="navs">' +
@@ -314,7 +319,7 @@ function dayHTML() {
     html += '<p class="empty">Este día no tiene ítems. Agregá uno abajo o armá la plantilla.</p>';
   } else if (!pend.length && done.length) {
     html += key === tk
-      ? '<div class="celebrate' + (anim && anim.day ? ' go' : '') + '"><div class="cel-badge">' + ic('check', 30) + '</div><div><div class="cel-title">Día completo</div><div class="cel-sub">Hiciste todo lo de hoy.</div></div></div>'
+      ? '<div class="celebrate' + (anim && anim.day ? ' go' : '') + '"><div class="cel-badge">' + ic('check', 30) + '</div><div><div class="cel-title">' + (isRiver() ? '¡Golazo!' : 'Día completo') + '</div><div class="cel-sub">' + (isRiver() ? 'Día completo. Ganaste el partido de hoy.' : 'Hiciste todo lo de hoy.') + '</div></div></div>'
       : '<p class="allset">Todo hecho.</p>';
   }
   if (pend.length) html += '<ul class="list">' + pend.map((i) => itemHTML(i, false)).join('') + '</ul>';
@@ -360,8 +365,8 @@ function editHTML() {
 function settingsHTML() {
   const sw = Object.keys(PALETTES).map((k) => {
     const p = PALETTES[k], t = isDark() ? p.dark : p.light;
-    return '<button class="swatch" data-act="palette" data-k="' + k + '" aria-pressed="' + (prefs.palette === k) + '" style="--sw-bg:' + t.bg + ';--sw-ac:' + t.accent + ';--sw-soft:' + t.accentSoft + ';--sw-ink:' + t.accentInk + '">' +
-      '<span class="sw-chip"><span class="sw-dot">' + ic('check', 14) + '</span><span class="sw-bar"></span><span class="sw-bar short"></span></span><span class="sw-name">' + p.name + '</span></button>';
+    return '<button class="swatch' + (k === 'river' ? ' feat' : '') + '" data-act="palette" data-k="' + k + '" aria-pressed="' + (prefs.palette === k) + '" style="--sw-bg:' + t.bg + ';--sw-ac:' + t.accent + ';--sw-soft:' + t.accentSoft + ';--sw-ink:' + t.accentInk + '">' +
+      '<span class="sw-chip' + (k === 'river' ? ' sw-river' : '') + '"><span class="sw-dot">' + ic('check', 14) + '</span><span class="sw-bar"></span><span class="sw-bar short"></span></span><span class="sw-name">' + p.name + (k === 'river' ? '<span class="sw-sub">Banda roja, papelitos y silbato de final</span>' : '') + '</span></button>';
   }).join('');
   const seg = (k, label) => '<button class="segbtn" data-act="mode" data-k="' + k + '" aria-pressed="' + (prefs.mode === k) + '">' + label + '</button>';
   const toggle = (k, label, hint) => '<div class="setrow"><div><div class="set-l">' + label + '</div><div class="set-h">' + hint + '</div></div>' +

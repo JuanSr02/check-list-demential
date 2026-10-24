@@ -4,6 +4,11 @@ const LS_PREFS = 'plantilla.prefs.v1';
 
 // Cada paleta define sus colores en claro y en oscuro.
 export const PALETTES = {
+  river: {
+    name: 'River',
+    light: { bg: '#F6F4F4', surface: '#FFFFFF', ink: '#161012', muted: '#6B5F62', line: '#E7DEE0', accent: '#D1132A', accentInk: '#FFFFFF', accentSoft: '#FBE1E4' },
+    dark:  { bg: '#0E0A0B', surface: '#191214', ink: '#F4ECEE', muted: '#A8989C', line: '#33262A', accent: '#E5263B', accentInk: '#FFFFFF', accentSoft: '#3A1A1F' }
+  },
   azul: {
     name: 'Azul',
     light: { bg: '#F2F5F5', surface: '#FFFFFF', ink: '#13201F', muted: '#5A6B6A', line: '#DAE2E2', accent: '#1F5FC4', accentInk: '#FFFFFF', accentSoft: '#E3ECFA' },
@@ -36,7 +41,7 @@ export const PALETTES = {
   }
 };
 
-const DEFAULTS = { palette: 'azul', mode: 'auto', sound: true, motion: true };
+const DEFAULTS = { palette: 'river', mode: 'auto', sound: true, motion: true };
 
 function load() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_PREFS)) || {}); } catch (e) { return Object.assign({}, DEFAULTS); }
@@ -51,6 +56,7 @@ export function setPref(k, v) {
 
 const darkMQ = window.matchMedia('(prefers-color-scheme: dark)');
 const reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
+export const isRiver = () => prefs.palette === 'river';
 export const isDark = () => prefs.mode === 'dark' || (prefs.mode === 'auto' && darkMQ.matches);
 export const motionOK = () => prefs.motion && !reduceMQ.matches;
 
@@ -62,6 +68,7 @@ export function applyTheme() {
   r.setProperty('--muted', t.muted); r.setProperty('--line', t.line); r.setProperty('--accent', t.accent);
   r.setProperty('--accent-ink', t.accentInk); r.setProperty('--accent-soft', t.accentSoft);
   r.setProperty('color-scheme', isDark() ? 'dark' : 'light');
+  document.documentElement.classList.toggle('river', prefs.palette === 'river');
   try { localStorage.setItem('plantilla.themevars', JSON.stringify(t)); } catch (e) {}
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => { m.setAttribute('content', t.bg); m.removeAttribute('media'); });
 }
@@ -92,11 +99,33 @@ function tone(freq, start, dur, { type = 'sine', gain = 0.16, slide = 0 } = {}) 
   o.connect(g).connect(a.destination);
   o.start(t0); o.stop(t0 + dur + 0.02);
 }
+// Silbato de árbitro: tono agudo con un temblor rápido.
+function whistle(start, dur, gain = 0.07) {
+  const a = ac(); if (!a) return;
+  const t0 = a.currentTime + start;
+  const o = a.createOscillator(), lfo = a.createOscillator(), lg = a.createGain(), g = a.createGain();
+  o.type = 'sine'; o.frequency.setValueAtTime(2900, t0);
+  lfo.type = 'sine'; lfo.frequency.setValueAtTime(34, t0); lg.gain.setValueAtTime(140, t0);
+  lfo.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.02);
+  g.gain.setValueAtTime(gain, t0 + dur - 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(a.destination);
+  o.start(t0); lfo.start(t0); o.stop(t0 + dur + 0.02); lfo.stop(t0 + dur + 0.02);
+}
 const SOUNDS = {
   tick() { tone(880, 0, 0.09, { type: 'triangle', gain: 0.12, slide: 1.25 }); },
   untick() { tone(520, 0, 0.08, { type: 'triangle', gain: 0.08, slide: 0.8 }); },
   done() { tone(659.25, 0, 0.14, { type: 'triangle', gain: 0.14 }); tone(987.77, 0.08, 0.22, { type: 'triangle', gain: 0.14 }); },
   day() {
+    if (isRiver()) {
+      // pitazo final: corto, corto, largo; después el festejo
+      whistle(0, 0.16); whistle(0.24, 0.16); whistle(0.48, 0.7);
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 1.25 + i * 0.09, 0.32, { type: 'triangle', gain: 0.13 }));
+      tone(1318.5, 1.63, 0.6, { type: 'sine', gain: 0.1 });
+      return;
+    }
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, i * 0.09, 0.32, { type: 'triangle', gain: 0.13 }));
     tone(1318.5, 0.38, 0.6, { type: 'sine', gain: 0.1 });
     tone(1567.98, 0.38, 0.6, { type: 'sine', gain: 0.06 });
@@ -120,8 +149,16 @@ export function confetti() {
   const g = cv.getContext('2d'); g.scale(dpr, dpr);
   const css = getComputedStyle(document.documentElement);
   const accent = css.getPropertyValue('--accent').trim() || '#1F5FC4';
-  const colors = [accent, '#F5B700', '#FF6B6B', '#2EC4B6', '#9B5DE5', '#FFFFFF'];
-  const parts = Array.from({ length: 140 }, () => {
+  const river = isRiver();
+  const colors = river ? ['#D1132A', '#D1132A', '#FFFFFF', '#FFFFFF', '#F1F1F1', '#B30F23'] : [accent, '#F5B700', '#FF6B6B', '#2EC4B6', '#9B5DE5', '#FFFFFF'];
+  const LIFE = river ? 3800 : 2600;
+  // River: lluvia de papelitos desde arriba, como en la tribuna.
+  const parts = river ? Array.from({ length: 180 }, () => ({
+    x: Math.random() * W, y: -20 - Math.random() * H * 0.6,
+    vx: (Math.random() - 0.5) * 1.2, vy: 1.6 + Math.random() * 2.2, flutter: Math.random() * 6.28,
+    w: 7 + Math.random() * 7, h: 5 + Math.random() * 6, r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.18,
+    c: colors[(Math.random() * colors.length) | 0], fall: true
+  })) : Array.from({ length: 140 }, () => {
     const fromLeft = Math.random() < 0.5;
     return {
       x: fromLeft ? -10 : W + 10, y: H * (0.55 + Math.random() * 0.3),
@@ -135,13 +172,18 @@ export function confetti() {
     const el = now - t0;
     g.clearRect(0, 0, W, H);
     parts.forEach((p) => {
-      p.vy += 0.32; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      if (p.fall) { p.flutter += 0.08; p.x += p.vx + Math.sin(p.flutter) * 0.9; p.y += p.vy; p.r += p.vr; }
+      else { p.vy += 0.32; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr; }
       g.save(); g.translate(p.x, p.y); g.rotate(p.r);
-      g.globalAlpha = Math.max(0, 1 - el / 2600);
-      g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r * 2)) + 1);
+      g.globalAlpha = Math.max(0, Math.min(1, (LIFE - el) / 700));
+      g.fillStyle = p.c;
+      if (p.c === '#FFFFFF' || p.c === '#F1F1F1') { g.strokeStyle = 'rgba(0,0,0,0.12)'; g.lineWidth = 0.6; }
+      const hh = p.h * Math.abs(Math.cos(p.r * 2)) + 1;
+      g.fillRect(-p.w / 2, -hh / 2, p.w, hh);
+      if (p.c === '#FFFFFF' || p.c === '#F1F1F1') g.strokeRect(-p.w / 2, -hh / 2, p.w, hh);
       g.restore();
     });
-    if (el < 2600) requestAnimationFrame(frame); else cv.remove();
+    if (el < LIFE) requestAnimationFrame(frame); else cv.remove();
   })(t0);
 }
 
