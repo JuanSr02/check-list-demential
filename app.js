@@ -52,6 +52,7 @@ const normDay = (arr) => arr.map((x) => ({
 const activeSubs = (it) => (it.subs || []).filter((s) => s.status !== 'skipped');
 const doneSubs = (it) => activeSubs(it).filter((s) => s.status === 'done');
 function sync(it) {
+  if (it.status === 'skipped') return;   // omitido por hoy: se respeta aunque tenga subítems pendientes
   const a = activeSubs(it);
   if (a.length) it.status = a.every((s) => s.status === 'done') ? 'done' : 'pending';
 }
