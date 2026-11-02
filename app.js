@@ -293,12 +293,14 @@ function updateAcct() {
   if (el) el.outerHTML = acctHTML(); else render();
 }
 
+const canResetDay = (items) => items.some((i) => i.status !== 'pending' || (i.subs || []).some((x) => x.status !== 'pending'));
+
 function acctHTML() {
   const pend = Object.keys(queue).length;
   const status = !S.online
     ? 'Sin conexión' + (pend ? ': ' + pend + (pend > 1 ? ' cambios esperan' : ' cambio espera') + ' para subirse' : '') + '.'
-    : (pend ? 'Guardando…' : 'Guardado en la nube.');
-  return '<div class="acct"><span>' + status + '</span><button class="link" data-act="signout">Salir de este dispositivo</button></div>';
+    : '';
+  return '<div class="acct">' + (status ? '<span>' + status + '</span>' : '') + '<button class="link" data-act="signout">Salir de este dispositivo</button></div>';
 }
 
 function dayHTML() {
@@ -333,9 +335,10 @@ function dayHTML() {
       '</ul></section>';
   }
   html += '<form id="form-add" class="addrow" autocomplete="off"><input class="field" id="add" type="text" enterkeyhint="done" maxlength="120" placeholder="Agregar solo ' + (key === tk ? 'para hoy' : 'a este día') + '" aria-label="Nuevo ítem" value="' + esc(S.draft) + '"><button class="btn" type="submit">Agregar</button></form>';
-  html += '<section><div class="h"><span>Últimos 7 días</span></div><div class="strip">' + stripHTML() + '</div></section>';
   html += '<div class="foot">' + (S.err ? '<p class="err" role="alert">' + esc(S.err) + '</p>' : '') +
-    '<div class="footbtns"><button class="btn" data-act="edit">Editar plantilla</button><button class="btn" data-act="settings">Ajustes</button></div>' + acctHTML() + '</div>';
+    '<div class="footbtns">' + (canResetDay(items) ? '<button class="btn" data-act="resetDay">Deshacer todo</button>' : '') +
+    '<button class="btn" data-act="edit">Editar plantilla</button><button class="btn" data-act="settings">Ajustes</button></div>' +
+    acctHTML() + '</div>';
   return html;
 }
 
@@ -548,6 +551,17 @@ const A = {
       const s = find(it.subs, el.dataset.sid);
       if (s) s.status = 'skipped';
     });
+    done();
+  },
+  resetDay() {
+    const done = undoableDay('Día reiniciado');
+    mutate(S.sel, (items) => {
+      items.forEach((it) => {
+        it.status = 'pending';
+        (it.subs || []).forEach((x) => { x.status = 'pending'; });
+      });
+    });
+    window.scrollTo(0, 0);
     done();
   },
   fold(el) {

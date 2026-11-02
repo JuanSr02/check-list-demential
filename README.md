@@ -13,7 +13,8 @@ Proyecto construido junto con [Claude](https://claude.ai) (Anthropic).
 - **Deshacer.** Omitir, quitar, desmarcar un grupo o borrar de la plantilla se puede revertir desde el aviso inferior.
 - **Navegación rápida.** Deslizar a los lados (o ←/→ en la PC) cambia de día; al scrollear queda una barra compacta con el avance.
 - **Ajustes por día.** Se puede omitir un ítem o un subítem solo por hoy, o agregar algo puntual sin tocar la plantilla.
-- **Historial.** Avance de los últimos 7 días, y navegación hasta 30 días atrás.
+- **Historial.** Navegación hasta 30 días atrás.
+- **Deshacer todo.** Un botón reinicia el día: vuelve a pendiente lo hecho y restaura lo omitido (ítems y subítems).
 - **Sincronizada y offline.** Lo que marcás en el celular aparece en la PC. Sin conexión sigue funcionando y sube los cambios cuando vuelve.
 - **Tema River** (por defecto). Rojo y blanco con la banda en diagonal, lluvia de papelitos y pitazo final al completar el día, y mensajes especiales el 25 de mayo y el 9 de diciembre.
 - **Temas de color.** Además: Azul, Bosque, Atardecer, Uva, Océano y Grafito, cada uno con modo claro, oscuro o automático.

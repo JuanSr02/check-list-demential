@@ -326,3 +326,4 @@ body { transition: background-color 0.3s ease, color 0.3s ease; }
 .swatch.feat .sw-chip { flex: none; width: 46%; }
 .swatch.feat .sw-name { display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
 .sw-sub { font-size: 13px; font-weight: 400; color: var(--muted); }
+.footbtns .btn[data-act="resetDay"] { flex-basis: 100%; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
