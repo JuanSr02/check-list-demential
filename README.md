@@ -14,6 +14,7 @@ Proyecto construido junto con [Claude](https://claude.ai) (Anthropic).
 - **Navegación rápida.** Deslizar a los lados (o ←/→ en la PC) cambia de día; al scrollear queda una barra compacta con el avance.
 - **Ajustes por día.** Se puede omitir un ítem o un subítem solo por hoy, o agregar algo puntual sin tocar la plantilla.
 - **Historial.** Navegación hasta 30 días atrás.
+- **Palabra del día.** Un botón chico bajo la fecha muestra un versículo bíblico o una frase motivacional, distinto cada día. En *Ajustes* se elige alternar, solo versículos, solo frases u ocultarlo.
 - **Deshacer todo.** Un botón reinicia el día: vuelve a pendiente lo hecho y restaura lo omitido (ítems y subítems).
 - **Sincronizada y offline.** Lo que marcás en el celular aparece en la PC. Sin conexión sigue funcionando y sube los cambios cuando vuelve.
 - **Tema River** (por defecto). Rojo y blanco con la banda en diagonal, lluvia de papelitos y pitazo final al completar el día, y mensajes especiales el 25 de mayo y el 9 de diciembre.
@@ -55,6 +56,7 @@ Sin Redis configurado, los datos se guardan en memoria.
 ├── styles.css             # estilos y temas
 ├── app.js                 # lógica, vistas y sincronización
 ├── fx.js                  # temas, sonidos (Web Audio) y confeti
+├── words.js               # versículos y frases de la palabra del día
 ├── api/
 │   ├── state.js           # GET/POST de plantilla y días (protegido con clave)
 │   └── _store.js          # cliente Redis (memoria en local)

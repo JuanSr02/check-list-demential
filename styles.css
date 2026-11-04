@@ -198,7 +198,8 @@ body { transition: background-color 0.3s ease, color 0.3s ease; }
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; }
 
 /* ---------- ajustes ---------- */
-.footbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.footbtns { align-self: stretch; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.footbtns .btn { width: 100%; }
 .swatches { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .swatch {
   display: flex; flex-direction: column; gap: 8px; padding: 8px 8px 10px; text-align: left;
@@ -242,7 +243,7 @@ body { transition: background-color 0.3s ease, color 0.3s ease; }
 .chev svg { transition: transform 0.2s ease; }
 .grp.folded .chev svg { transform: rotate(-90deg); }
 .grp:not(.folded) > .row { background: color-mix(in srgb, var(--accent-soft) 35%, transparent); }
-.motion .subwrap:not([hidden]) { animation: unfold 0.22s ease-out; }
+.motion .subwrap.opening { animation: unfold 0.22s ease-out; }
 @keyframes unfold { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .subs { padding-top: 4px; }
 
@@ -326,4 +327,25 @@ body { transition: background-color 0.3s ease, color 0.3s ease; }
 .swatch.feat .sw-chip { flex: none; width: 46%; }
 .swatch.feat .sw-name { display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
 .sw-sub { font-size: 13px; font-weight: 400; color: var(--muted); }
-.footbtns .btn[data-act="resetDay"] { flex-basis: 100%; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.footbtns .btn[data-act="resetDay"] { grid-column: 1 / -1; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
+/* palabra del día */
+.wordbtn {
+  margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px 0 10px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+  font-size: 13px; font-weight: 600;
+}
+.wordbtn svg { color: var(--accent); }
+.wordbtn[aria-expanded="true"] { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
+@media (hover: hover) { .wordbtn:hover { color: var(--ink); border-color: var(--accent); } }
+.wordcard {
+  position: relative; margin: 0; padding: 18px 44px 18px 20px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+}
+.wordcard blockquote { margin: 0; font: 500 18px/1.45 var(--f-display); text-wrap: pretty; }
+.wordcard.verse blockquote::before { content: "\201C"; } .wordcard.verse blockquote::after { content: "\201D"; }
+.wordcard figcaption { margin-top: 8px; font: 500 13px var(--f-mono); letter-spacing: 0.04em; color: var(--accent); }
+.wordclose { position: absolute; top: 6px; right: 4px; width: 40px; height: 40px; opacity: 0.6; }
+.motion .wordcard.in { animation: unfold 0.25s ease-out; }
+.segctl4 { grid-template-columns: repeat(4, 1fr); }
+.segctl4 .segbtn { font-size: 13px; padding: 0 2px; }

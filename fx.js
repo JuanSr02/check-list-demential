@@ -41,7 +41,7 @@ export const PALETTES = {
   }
 };
 
-const DEFAULTS = { palette: 'river', mode: 'auto', sound: true, motion: true };
+const DEFAULTS = { palette: 'river', mode: 'auto', sound: true, motion: true, word: 'mix' };
 
 function load() {
   try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(LS_PREFS)) || {}); } catch (e) { return Object.assign({}, DEFAULTS); }

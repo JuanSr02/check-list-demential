@@ -1,3 +1,4 @@
+import { wordOfDay } from './words.js';
 import { PALETTES, prefs, setPref, isDark, isRiver, motionOK, sfx, confetti, buzz } from './fx.js';
 
 /* ================= plantilla por defecto ================= */
@@ -35,7 +36,9 @@ const ICON = {
   up: '<path d="M3.5 10L8 5.5 12.5 10"/>',
   down: '<path d="M3.5 6L8 10.5 12.5 6"/>',
   trash: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8h5.8l.6-8"/>',
-  chev: '<path d="M4 6l4 4 4-4"/>'
+  chev: '<path d="M4 6l4 4 4-4"/>',
+  book: '<path d="M8 4.5C6.6 3.4 4.6 3 2.5 3v9.5c2.1 0 4.1.4 5.5 1.5 1.4-1.1 3.4-1.5 5.5-1.5V3c-2.1 0-4.1.4-5.5 1.5zM8 4.5V14"/>',
+  spark: '<path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l1.8 1.8M10.2 10.2L12 12M12 4l-1.8 1.8M5.8 10.2L4 12"/>'
 };
 const ic = (name, size = 18) =>
   '<svg width="' + size + '" height="' + size + '" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICON[name] + '</svg>';
@@ -69,6 +72,7 @@ const S = {
 const LS_FOLD = 'plantilla.folded.v1';
 let folded = new Set((() => { try { return JSON.parse(localStorage.getItem(LS_FOLD)) || []; } catch (e) { return []; } })());
 const saveFold = () => { try { localStorage.setItem(LS_FOLD, JSON.stringify([...folded])); } catch (e) {} };
+let wordOpen = false;      // panel de la palabra del día abierto
 let anim = null;           // animación a aplicar en el próximo render
 const segPrev = {};         // ancho anterior de cada segmento de la barra de avance
 const tplItems = () => S.tpl || DEFAULTS;
@@ -222,6 +226,7 @@ function headHTML(key) {
     else if (md === '12-9') rel += ' · Madrid 2018';
   }
   return '<header class="top"><div class="datebar"><div class="dt"><div class="eyebrow' + (diffDays ? ' past' : '') + '">' + rel + '</div><h1 class="dow" style="margin:0">' + esc(dow) + '</h1><div class="dm">' + esc(dm) + '</div>' +
+    (S.ready && prefs.word !== 'off' ? '<button class="wordbtn" data-act="word" aria-expanded="' + wordOpen + '" aria-controls="wordcard">' + ic(wordOfDay(key, prefs.word).type === 'verse' ? 'book' : 'spark', 14) + '<span>' + wordOfDay(key, prefs.word).label + '</span></button>' : '') +
     (key !== tk ? '<button class="pill" data-act="today">Volver a hoy</button>' : '') +
     '</div><div class="navs">' +
     '<button class="nav" data-act="prev" aria-label="Día anterior"' + (key <= minKey() ? ' disabled' : '') + '>' + ic('left') + '</button>' +
@@ -313,6 +318,12 @@ function dayHTML() {
   const done = items.filter((i) => i.status === 'done');
   const skip = items.filter((i) => i.status === 'skipped');
   let html = headHTML(key);
+  if (wordOpen && prefs.word !== 'off') {
+    const w = wordOfDay(key, prefs.word);
+    html += '<figure class="wordcard ' + w.type + '" id="wordcard"><blockquote>' + esc(w.text) + '</blockquote>' +
+      (w.ref ? '<figcaption>' + esc(w.ref) + '</figcaption>' : '') +
+      '<button class="ico wordclose" data-act="word" aria-label="Cerrar">' + ic('x', 14) + '</button></figure>';
+  }
 
   if (key === tk && S.days[key]) {
     const diff = tplDiff(items);
@@ -379,6 +390,8 @@ function settingsHTML() {
     '<button class="btn primary" data-act="doneSettings">Listo</button></div></header>' +
     '<section><div class="h"><span>Color</span></div><div class="swatches">' + sw + '</div></section>' +
     '<section><div class="h"><span>Modo</span></div><div class="segctl" role="group" aria-label="Modo">' + seg('auto', 'Automático') + seg('light', 'Claro') + seg('dark', 'Oscuro') + '</div></section>' +
+    '<section><div class="h"><span>Palabra del día</span></div><div class="segctl segctl4" role="group" aria-label="Palabra del día">' +
+      ['mix', 'verse', 'phrase', 'off'].map((k, i) => '<button class="segbtn" data-act="wordkind" data-k="' + k + '" aria-pressed="' + (prefs.word === k) + '">' + ['Alternar', 'Versículos', 'Frases', 'Ocultar'][i] + '</button>').join('') + '</div></section>' +
     '<section><div class="h"><span>Efectos</span></div><div class="list setlist">' +
       toggle('sound', 'Sonido', 'Al marcar, al completar un ítem y al terminar el día.') +
       toggle('motion', 'Animaciones', 'Confeti y movimientos al marcar.') +
@@ -564,11 +577,14 @@ const A = {
     window.scrollTo(0, 0);
     done();
   },
+  word() { wordOpen = !wordOpen; render(); if (wordOpen && motionOK()) { const c = document.getElementById('wordcard'); if (c) c.classList.add('in'); } },
+  wordkind(el) { setPref('word', el.dataset.k); render(); },
   fold(el) {
     const id = el.dataset.id;
     if (folded.has(id)) folded.delete(id); else folded.add(id);
     saveFold(); S.focus = null; render();
     const b = root.querySelector('.expander[data-id="' + id.replace(/"/g, '') + '"]'); if (b) b.focus();
+    const w = document.getElementById('subs-' + id); if (w && !w.hidden) w.classList.add('opening');
   },
   srestore(el) {
     mutate(S.sel, (items) => {
